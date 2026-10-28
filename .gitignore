@@ -1,0 +1,23 @@
+
+# Python virtual environment
+.venv/
+
+# Python generated files
+__pycache__/
+*.py[cod]
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Testing artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+
+# Official downloaded source CSV
+# Keep locally for reproducibility.
+# Do not redistribute without verifying permission.
+data/raw/Redispatch_Daten.csv

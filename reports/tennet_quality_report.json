@@ -1,0 +1,46 @@
+{
+  "assignment_id": "IRIS-RED-TENNET",
+  "coverage": {
+    "affected_facility_available_rows": 402,
+    "bottleneck_location_available_rows": 0,
+    "earliest_start_utc": "2026-09-30T22:00:00+00:00",
+    "latest_end_utc": "2026-10-07T22:00:00+00:00",
+    "measured_curtailed_mw_available_rows": 0
+  },
+  "known_limitations": [
+    "Affected facility names do not establish actual grid bottleneck locations.",
+    "Redispatch power adjustments are not automatically equivalent to measured electricity curtailment.",
+    "The source is a historical CSV download; automatic source retrieval is not yet verified.",
+    "The row content hash is not a guaranteed permanent real-world event identifier.",
+    "Duplicate source row counts are available, but duplicate line numbers are not retained."
+  ],
+  "source": {
+    "file_size_bytes": 88502,
+    "filename": "Redispatch_Daten.csv",
+    "publication_url": "https://www.netztransparenz.de/en/Ancillary-Services/System-operations/Redispatch",
+    "retrieval": "Manual official CSV download",
+    "sha256": "62fe58ee59cccc3bfa1c6d61812540ea2c7e9c48b64a23475d8dd75f1a8cb6f0"
+  },
+  "source_validation": {
+    "duplicate_rows": 0,
+    "input_rows": 462,
+    "rejected_rows": 0,
+    "rejection_details": [],
+    "valid_unique_rows": 462
+  },
+  "tennet_classification": {
+    "both_roles_rows": 106,
+    "instructed_rows": 112,
+    "non_tennet_rows": 60,
+    "requested_non_test_reduction_rows": 212,
+    "requested_rows": 396,
+    "tennet_related_unique_rows": 402
+  },
+  "tennet_reason_counts": {
+    "Probefahrt": 13,
+    "Spannungsbedingter Redispatch": 6,
+    "Strom- und Spannungsbedingter RD": 10,
+    "Strombedingter Countertrade DE-DK1": 3,
+    "Strombedingter Redispatch": 370
+  }
+}

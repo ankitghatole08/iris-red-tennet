@@ -1,486 +1,597 @@
-# 🏢 NRW Data Center Business Intelligence Platform
 
-### AI-Powered Geospatial Business Intelligence for Data Center Site Selection and Infrastructure Analysis
-
-The NRW Data Center Business Intelligence Platform is an AI-powered decision support system that combines geospatial analysis, infrastructure intelligence, renewable energy data, market intelligence, and conversational AI into a single interactive dashboard.
-
-Built with **Python**, **PostgreSQL/PostGIS**, **GeoPandas**, **PyDeck**, **Streamlit**, and **OpenAI**, the platform enables users to evaluate data center locations through interactive GIS visualization, site scoring, and AI-assisted insights.
-
----
-
-## Table of Contents
-
-- [Overview](#overview)
-- [Dashboard Preview](#dashboard-preview)
-- [Key Features](#key-features)
-- [System Architecture](#system-architecture)
-- [How It Works](#how-it-works)
-- [Dashboard Modules](#dashboard-modules)
-- [AI Advisor](#ai-advisor)
-- [Technology Stack](#technology-stack)
-- [Project Structure](#project-structure)
-- [Installation](#installation)
-- [Running the Dashboard](#running-the-dashboard)
-- [Project Status](#current-project-status)
-- [Roadmap](#roadmap)
-- [Vision](#vision)
-
-![Python]
-![PostgreSQL]
-![PostGIS]
-![Streamlit]
-![OpenAI]
-![Status]
+# IRIS Task 093 — TenneT Live Grid Stress & EBN Alerts
 
 ## Overview
 
-Selecting an optimal location for a modern data center requires much more than available land.
+This repository contains a reproducible, staging-only ingestion
+pipeline for TenneT-related electricity-grid redispatch observations.
 
-Power infrastructure, renewable energy, electrical grid capacity, market activity, and surrounding infrastructure all influence the long-term viability of a site.
+The implementation extracts historical redispatch observations from
+a public German transmission-system-operator publication, validates
+and normalizes the data, identifies TenneT involvement, and loads
+eligible records into an isolated PostgreSQL staging table.
 
-The NRW Data Center Business Intelligence Platform integrates multiple public infrastructure datasets into a unified PostgreSQL/PostGIS database and provides an interactive AI-powered dashboard for analyzing, comparing, and evaluating potential data center locations.
+**Important:** The implemented workflow is a historical CSV ingestion
+pipeline, not a live streaming integration or a production alerting
+system. Missing bottleneck locations, measured curtailed MW and
+source-revision handling are documented limitations.
 
-The platform combines:
+The original NRW Data Center Business Intelligence Platform
+documentation is preserved in:
 
-- Geospatial Intelligence
-- Infrastructure Analysis
-- Site Scoring
-- Market Intelligence
-- AI-assisted Decision Support
+`docs/README_BASE_PROJECT.md`
 
-# Key Features
+## 1. Implemented Scope
 
-## GIS Intelligence
+- Public source-backed redispatch observations
+- Source-file and record SHA-256 fingerprints
+- CSV validation and UTC timestamp normalization
+- Decimal-based MW and MWh parsing
+- TenneT requesting/instructing operator classification
+- Rejection of malformed source records
+- Exact-duplicate detection
+- Transactional PostgreSQL ingestion
+- Idempotent reruns for identical records
+- Staging-only access using restricted credentials
+- Dockerized Python application and PostgreSQL/PostGIS
+- Automated database initialization
+- Unit and PostgreSQL integration tests
+- Source-aware operational logging
+- Data quality and limitations reporting
 
-✔ Interactive GIS Infrastructure Map
+Only the `iris_staging` schema is used for the Task 093 data
+pipeline. No production database or `iris_core` write is required.
 
-✔ Data Center Visualization
+## 2. Data Source and Provenance
 
-✔ High Voltage Substations
+Primary source:
 
-✔ Transformers
+Netztransparenz — Redispatch
 
-✔ Transmission Lines
+https://www.netztransparenz.de/en/Ancillary-Services/System-operations/Redispatch
 
-✔ Renewable Energy Assets
+The implemented source is a downloaded historical German redispatch
+CSV containing records involving multiple transmission operators.
+TenneT-related records are selected using the published requesting
+and instructing operator fields.
 
----
+Input filename:
 
-## Business Intelligence
+`data/raw/Redispatch_Daten.csv`
 
-✔ KPI Dashboard
+Verified input snapshot:
 
-✔ Site Intelligence
+- Total unique validated records: 462
+- TenneT-related records: 402
+- Other records excluded from staging: 60
+- Rejected records: 0
+- Exact duplicate source rows: 0
 
-✔ Site Score
+Verified source SHA-256:
 
-✔ Market Intelligence
+`62fe58ee59cccc3bfa1c6d61812540ea2c7e9c48b64a23475d8dd75f1a8cb6f0`
 
-✔ News Intelligence
+These counts refer to the verified input snapshot. A different
+download or updated publication may produce different results.
 
-✔ Spatial Infrastructure Analysis
+### Source acquisition
 
----
+The CSV was obtained manually from the official publication.
 
-## Artificial Intelligence
+For reproducing the verified run, place the corresponding source
+CSV at:
 
-✔ AI Advisor
+`data/raw/Redispatch_Daten.csv`
 
-✔ Natural Language Queries
+The file must retain its expected semicolon-delimited structure
+and required German column names.
 
-✔ Executive Infrastructure Summaries
+The download is not automated, and the source may be updated by
+its publisher. A fresh download is therefore not guaranteed to
+have the same SHA-256 or record counts.
 
-✔ Context-aware Responses
+Redistribution rights for the raw CSV must be checked before
+including it in a publicly accessible repository.
 
-✔ Retrieval-Augmented Generation (RAG)
+### Additional investigated sources
 
----
+The Dutch congestion-capacity publication and ENTSO-E
+Redispatching Internal data were also investigated.
 
-## Spatial Intelligence
+An ENTSO-E export for TenneT Germany provided 15 redispatch
+instances and 252 interval records on the examined date.
+The affected-asset location fields were empty for those records.
 
-✔ Power Readiness Analysis
+ENTSO-E observations were not automatically merged with the
+primary Netztransparenz records because event-level correspondence
+has not been established.
 
-✔ Renewable Energy Analysis
+## 3. Technology Stack
 
-✔ Infrastructure Distance Calculations
-
-✔ Land Value Integration
-
-✔ Site Ranking
-
-# System Architecture
-
-```mermaid
-flowchart TD
-
-A[External Data Sources]
-
-B[ETL Pipelines]
-
-C[PostgreSQL + PostGIS]
-
-D[Repository Layer]
-
-E[Business Services]
-
-F[Interactive Dashboard]
-
-G[Site Intelligence]
-
-H[News Intelligence]
-
-I[AI Advisor]
-
-J[Executive Decision Support]
-
-A --> B
-B --> C
-C --> D
-D --> E
-
-E --> F
-E --> G
-E --> H
-
-F --> I
-G --> I
-H --> I
-
-I --> J
-```
-```
-
-┌──────────────────────┐
-│ External Data Sources│
-└──────────┬───────────┘
-           │
-           ▼
-┌──────────────────────┐
-│    ETL Pipelines     │
-└──────────┬───────────┘
-           ▼
-┌──────────────────────┐
-│ PostgreSQL + PostGIS │
-└──────────┬───────────┘
-           ▼
-┌──────────────────────┐
-│ Repository Layer     │
-└──────────┬───────────┘
-           ▼
-┌──────────────────────┐
-│ Business Services    │
-└──────────┬───────────┘
-           ▼
-      ┌────┴────┐
-      ▼         ▼
-┌──────────┐ ┌──────────┐
-│ GIS Map  │ │ News BI  │
-└────┬─────┘ └────┬─────┘
-     │            │
-     └────┬───────┘
-          ▼
-┌──────────────────────┐
-│ Site Intelligence    │
-└──────────┬───────────┘
-           ▼
-┌──────────────────────┐
-│ AI Advisor           │
-└──────────┬───────────┘
-           ▼
-┌──────────────────────┐
-│ OpenAI GPT           │
-└──────────┬───────────┘
-           ▼
-┌──────────────────────┐
-│ Executive Insights   │
-└──────────────────────┘
-```
-```                  
-
-# Dashboard Modules
-
-## Interactive GIS Map
-
-Visualizes:
-
-- Data Centers
-- High Voltage Substations
-- Transformers
-- Renewable Energy Assets
-- High Voltage Transmission Lines
-
----
-
-## KPI Dashboard
-
-Provides executive metrics for infrastructure assets, facilities, and renewable energy resources.
-
----
-
-## Site Intelligence
-
-Displays infrastructure proximity, renewable energy availability, land valuation, and technical site characteristics for the selected facility.
-
----
-
-## Site Score
-
-Calculates a unified infrastructure readiness score using spatial analysis and business intelligence metrics.
-
----
-
-## News Intelligence
-
-Aggregates recent industry news and links relevant articles to companies and facilities.
-
----
-
-## AI Advisor
-
-Provides conversational access to infrastructure intelligence using natural language.
-
-
-# AI Advisor
-
-The AI Advisor enables users to explore infrastructure intelligence using natural language.
-
-Current capabilities
-
-- Site Summaries
-- Infrastructure Analysis
-- Grid Readiness Evaluation
-- Renewable Energy Analysis
-- Executive Recommendations
-- News Summaries
-
-Upcoming
-
-- Intent Detection
-- Tool Routing
-- Context Awareness
-- LangGraph Agents
-- Agentic RAG
-
-
-# Technology Stack
-
-## Backend
-
-- Python
+- Python 3.12
 - SQLAlchemy
-- PostgreSQL
-- PostGIS
-
-## GIS
-
-- GeoPandas
-- Shapely
-- PyDeck
-
-## Dashboard
-
-- Streamlit
-
-## AI
-
-- OpenAI
-- Retrieval-Augmented Generation (RAG)
-
-## Data Processing
-
-- Pandas
-- JSON
-- GeoJSON
-
-nrw-dc-bi/
-│
-├── app/
-│   ├── services/
-│   ├── repositories/
-│   ├── database/
-│   ├── spatial/
-│   ├── intelligence/
-│   └── ai/
-│
-├── ui/
-│
-├── data/
-│
-├── scripts/
-│
-├── tests/
-│
-└── README.md
-
-
-# Installation
-
-## Prerequisites
-
-- Python 3.12+
-- PostgreSQL 17 + PostGIS
-- uv (Python package manager)
-
-Install uv if you don't already have it:
-
-```bash
-pip install uv
-```
-
-or
-
-```bash
-powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-```
-
----
-
-## Clone the Repository
-
-```bash
-git clone <repository-url>
-
-cd nrw-dc-bi
-```
-
----
-
-## Create a Virtual Environment
-
-```bash
-uv venv
-```
-
-Activate it:
-
-### Windows
-
-```bash
-.venv\Scripts\activate
-```
-
-### Linux / macOS
-
-```bash
-source .venv/bin/activate
-```
-
----
-
-## Install Dependencies
-
-```bash
-uv sync
-```
-
-If you're not using a `uv.lock` yet, then instead use:
-
-```bash
-uv pip install -r requirements.txt
-```
-
----
-
-## Configure Environment
-
-```bash
-cp .env.example .env
-```
-
-Update the database connection and OpenAI API key.
-
----
-
-## Run Database Migrations
-
-```bash
-alembic upgrade head
-```
-
----
-
-## Start the Dashboard
-
-```bash
-streamlit run ui/app.py
-```
-
-The application will be available at:
-
-```
-http://localhost:8501
-```
-
-## Requirements
-
-- Python 3.12+
+- psycopg 3
+- python-dotenv
 - PostgreSQL 17
 - PostGIS
-- Git
-- uv
+- Docker and Docker Compose
+- Python unittest
 
-# Running the Dashboard
+The dedicated ETL dependencies are pinned in
+`requirements-tennet.txt`.
 
-```bash
-streamlit run ui/app.py
+## 4. Architecture
+
+```text
+Official Redispatch CSV
+        |
+        v
+CSV Extractor
+- Column validation
+- Timestamp normalization
+- Decimal parsing
+- SHA-256 provenance
+- Duplicate and malformed-row detection
+        |
+        v
+TenneT Transformer
+- Requesting operator classification
+- Instructing operator classification
+- Direction and test-run flags
+        |
+        v
+Staging Loader
+- Preview by default
+- Transactional insertion
+- Duplicate conflict handling
+- Source-aware logging
+        |
+        v
+PostgreSQL / PostGIS
+iris_staging.grid_congestion_timeseries
 ```
-# Current Project Status
 
-## Completed
+The Python application runs as an unprivileged container process.
+Database ingestion uses the restricted `iris_tennet_ingest` role.
 
-- Data Collection
-- ETL Pipelines
-- GIS Dashboard
-- Interactive Map
-- Site Intelligence
-- Site Score
-- News Intelligence
-- AI Advisor
-- Infrastructure Layers
+## 5. Project Files
 
-## In Progress
+```text
+app/
+  database/
+    staging_connection.py
+    staging_models.py
+  extractors/
+    tennet_redispatch_extractor.py
+  transformers/
+    tennet_redispatch_transformer.py
+  loaders/
+    tennet_redispatch_loader.py
+  services/
+    tennet_quality_report.py
 
-- Context-aware AI
-- Intent Detection
-- Tool Routing
-- LangGraph Integration
+docker/
+  postgres/
+    init/
+      20_iris_staging_init.sh
 
-## Planned
+tests/
+  test_tennet_pipeline.py
+  test_tennet_db_integration.py
 
-- Multi-Agent AI
-- Predictive Site Recommendations
-- Investment Forecasting
-- Voice Interface
+data/
+  raw/
+    Redispatch_Daten.csv
 
+reports/
+  tennet_quality_report.json
 
-# Roadmap
+Dockerfile
+docker-compose.yml
+.dockerignore
+.env.example
+requirements-tennet.txt
+```
 
-## Completed
+The repository also contains pre-existing base-project modules
+which are separate from this Task 093 ingestion workflow.
 
-- ETL Platform
-- GIS Visualization
-- Business Intelligence Dashboard
-- AI Advisor
-- News Intelligence
+## 6. Prerequisites
 
-## Next
+- Docker Desktop with Docker Compose
+- Git
+- The required official source CSV
+- Available local TCP port 55433
 
-- Intent Detection
-- Context-aware Responses
-- Agentic RAG
-- LangGraph Workflows
+Python installation on the host is optional when using the
+Docker workflow.
 
-## Future
+## 7. Environment Configuration
 
-- Predictive Site Ranking
-- Multi-Agent Decision Support
-- Voice-enabled AI Advisor
+Create a local environment file.
 
+PowerShell:
 
-# Vision
+```powershell
+Copy-Item .env.example .env
+```
 
-The long-term vision is to build an AI-powered decision support platform for data center planning and infrastructure investment.
+Edit `.env` and replace both password placeholders with strong,
+different local passwords.
 
-By combining geospatial intelligence, power infrastructure, renewable energy, land valuation, market intelligence, and conversational AI, the platform enables users to evaluate and compare potential data center locations through natural language interaction.
+Expected configuration:
 
-The project is designed to evolve into a comprehensive executive decision-support system that assists planners, investors, and infrastructure specialists in identifying optimal data center locations.
+```dotenv
+IRIS_POSTGRES_DB=iris_tennet_staging
+IRIS_POSTGRES_USER=iris_staging_owner
+IRIS_POSTGRES_PASSWORD=REPLACE_WITH_A_STRONG_LOCAL_PASSWORD
+
+IRIS_INGEST_USER=iris_tennet_ingest
+IRIS_INGEST_PASSWORD=REPLACE_WITH_A_DIFFERENT_STRONG_PASSWORD
+```
+
+Do not commit `.env`.
+
+The application database user is distinct from the PostgreSQL
+initialization user.
+
+## 8. Docker Setup
+
+Validate the configuration:
+
+```powershell
+docker compose config --quiet
+```
+
+Start the isolated PostgreSQL database:
+
+```powershell
+docker compose up -d postgres
+```
+
+On a fresh PostgreSQL volume, the initialization script creates
+the staging schema, table, index and restricted ingestion role.
+
+Initialization scripts are not rerun automatically when an
+already-initialized volume is restarted.
+
+The database runs on:
+
+- Docker internal address: `postgres:5432`
+- Host address: `127.0.0.1:55433`
+
+The ETL application is enabled through the `pipeline` profile
+and normally runs as an on-demand container.
+
+Do not use `docker compose down -v` on an environment containing
+data that must be retained.
+
+## 9. Run the ETL Pipeline
+
+### Preview without database writes
+
+```powershell
+docker compose run --rm --build app
+```
+
+Preview mode validates the source, identifies TenneT-related
+observations, and displays ingestion counts.
+
+It does not insert observations into PostgreSQL.
+
+### Apply ingestion
+
+```powershell
+docker compose run --rm app python -m app.loaders.tennet_redispatch_loader --apply
+```
+
+The loader uses the restricted staging database connection.
+
+It inserts new source-content hashes and skips existing hashes.
+The insert operation runs inside a PostgreSQL transaction.
+
+### Rerun behavior
+
+For the verified snapshot, after the first successful ingestion:
+
+```text
+Prepared records: 402
+Records before ingestion: 402
+New records inserted: 0
+Existing records skipped: 402
+Records after ingestion: 402
+```
+
+This demonstrates idempotency for unchanged source records.
+
+It does not establish stable provider event identity across
+revised or corrected publications.
+
+## 10. Database Schema
+
+Destination:
+
+`iris_staging.grid_congestion_timeseries`
+
+The table has 22 columns.
+
+Key fields include:
+
+| Field | Description |
+|---|---|
+| record_sha256 | Content-based record primary key |
+| source_file_sha256 | Source snapshot fingerprint |
+| source_url | Public source reference |
+| start_utc | Interval start timestamp |
+| end_utc | Interval end timestamp |
+| requesting_operator | Requesting transmission operator |
+| instructing_operator | Instructing transmission operator |
+| affected_facility | Facility named by the source |
+| direction | Reported redispatch direction |
+| reason | Reported reason |
+| average_power_mw | Published average power adjustment |
+| maximum_power_mw | Published maximum power adjustment |
+| total_energy_mwh | Published energy amount |
+| tennet_requested | TenneT involved as requesting operator |
+| tennet_instructed | TenneT involved as instructing operator |
+| tennet_related | TenneT involved in either role |
+| generation_reduction | Direction classified as reduction |
+| test_run | Event classified as test operation |
+| bottleneck_location | Nullable; location not established |
+| curtailed_mw | Nullable; measured curtailed MW not established |
+| ingested_at | Database ingestion timestamp |
+
+The database enforces:
+
+- A primary key on `record_sha256`
+- Nonnegative average and maximum MW values
+- End timestamp later than start timestamp
+- An index on `start_utc`
+
+### Important measurement distinction
+
+Published redispatch power adjustment in MW is not automatically
+equivalent to measured renewable generation curtailment.
+
+The current workflow therefore does not assign
+`average_power_mw` or `maximum_power_mw` to `curtailed_mw`.
+
+Similarly, a named affected facility is not necessarily the
+actual constrained network element or bottleneck location.
+
+## 11. Example SQL Queries
+
+### Total staged observations
+
+```sql
+SELECT COUNT(*)
+FROM iris_staging.grid_congestion_timeseries;
+```
+
+### Check unique record fingerprints
+
+```sql
+SELECT
+    COUNT(*) AS total_records,
+    COUNT(DISTINCT record_sha256) AS unique_records
+FROM iris_staging.grid_congestion_timeseries;
+```
+
+### Validate intervals
+
+```sql
+SELECT COUNT(*) AS invalid_intervals
+FROM iris_staging.grid_congestion_timeseries
+WHERE end_utc <= start_utc;
+```
+
+### Inspect representative observations
+
+```sql
+SELECT
+    start_utc,
+    end_utc,
+    requesting_operator,
+    instructing_operator,
+    affected_facility,
+    direction,
+    reason,
+    average_power_mw,
+    maximum_power_mw,
+    total_energy_mwh
+FROM iris_staging.grid_congestion_timeseries
+ORDER BY start_utc
+LIMIT 10;
+```
+
+### Check missing data
+
+```sql
+SELECT
+    COUNT(*) AS total_records,
+    COUNT(*) FILTER (
+        WHERE bottleneck_location IS NULL
+    ) AS missing_bottleneck_location,
+    COUNT(*) FILTER (
+        WHERE curtailed_mw IS NULL
+    ) AS missing_curtailed_mw
+FROM iris_staging.grid_congestion_timeseries;
+```
+
+Queries can be executed with `psql` inside the PostgreSQL
+container.
+
+## 12. Automated Tests
+
+Run all automated tests in Docker:
+
+```powershell
+docker compose run --rm --build app python -m unittest discover -s tests -p "test_*.py" -v
+```
+
+Verified result:
+
+```text
+Ran 14 tests
+
+OK
+```
+
+Coverage includes:
+
+- Valid CSV observations
+- Missing or malformed CSV fields
+- Invalid dates and time intervals
+- Unsupported timezones
+- Invalid adjustment directions
+- Negative MW values
+- Source duplicate detection
+- TenneT classification
+- Staging field mapping
+- PostgreSQL duplicate handling
+- Explicit transaction rollback
+- Automatic rollback after a PostgreSQL constraint violation
+
+The database integration tests require an initialized PostgreSQL
+service and the restricted ingestion credentials.
+
+Synthetic test records are rolled back, leaving the original
+staging observations unchanged.
+
+## 13. Quality Report
+
+A source quality report is generated by the project module:
+
+`app/services/tennet_quality_report.py`
+
+The verified report is stored at:
+
+`reports/tennet_quality_report.json`
+
+For the evaluated input snapshot:
+
+| Metric | Result |
+|---|---:|
+| Valid source observations | 462 |
+| Source duplicates | 0 |
+| Rejected observations | 0 |
+| TenneT-related observations | 402 |
+| Staged observations | 402 |
+| Missing bottleneck locations | 402 |
+| Missing measured curtailed MW | 402 |
+| Invalid stored time intervals | 0 |
+
+These metrics describe the evaluated snapshot, not a
+continuously refreshed live dataset.
+
+## 14. Operational Logging and Fault Handling
+
+The loader records operational events including:
+
+- Source validation and source SHA-256
+- Duplicate and rejected-record counts
+- TenneT classification counts
+- Preview completion
+- Ingestion start and completion
+- Source extraction failures
+- Database ingestion failures
+
+Logs are emitted to the process output streams and can be
+collected from Docker execution.
+
+Rejected input records cause the loader to abort before
+database ingestion.
+
+Database insertion occurs inside a transaction. A database
+constraint violation rolls back the failed transaction.
+
+The verified tests demonstrate rollback behavior for a
+controlled constraint-error scenario.
+
+## 15. Known Limitations and Open Requirements
+
+### Historical, not live
+
+The implemented source is a manually downloaded historical CSV.
+There is no authenticated live TenneT API integration, scheduled
+source retrieval, or continuous streaming ingestion.
+
+### Bottleneck locations unavailable
+
+The examined primary CSV does not identify exact constrained
+network elements or their geographic coordinates.
+
+The available facility field must not be presented as a
+verified grid bottleneck location.
+
+### Measured curtailed MW unavailable
+
+The source provides redispatch power-adjustment quantities,
+but not a separately verified measured curtailed-MW field.
+
+Accordingly, `curtailed_mw` remains NULL.
+
+### Source event corrections
+
+`record_sha256` represents content identity, not an official
+event identifier.
+
+A corrected observation with changed contents may receive a
+new hash and be stored as another row.
+
+The workflow does not automatically reconcile provider
+corrections or determine which revision is authoritative.
+
+### Data availability and redistribution
+
+The source snapshot must be supplied to reproduce the
+exact verified record counts.
+
+Source accessibility, updates, and redistribution permission
+must be checked before final publication.
+
+### EBN alerts and downstream BESS screening
+
+This implementation delivers staging observations for
+downstream analysis. It does not implement a separate
+production alert engine or BESS investment-screening model.
+
+No alert threshold or EBN-specific output is assumed
+without an explicit specification.
+
+## 16. Validation Summary
+
+The latest verified development run demonstrated:
+
+- Python image successfully built inside Docker
+- PostgreSQL initialized automatically using an isolated
+  fresh test volume
+- Restricted ingestion permissions verified
+- 14 automated tests passed inside Docker
+- 402 unique source records present in the staging table
+- No invalid stored time intervals
+- Identical-source rerun inserted zero duplicate records
+- Transaction rollback tested after a constraint violation
+- Existing staging observations preserved
+
+These findings apply to the tested environment and snapshot.
+
+A complete fresh-volume ingestion run and final source
+redistribution review remain outstanding acceptance checks.
+
+## 17. Submission Notes
+
+Before submission:
+
+1. Verify the included source-data usage rights.
+2. Ensure the verified source input or reproducible retrieval
+   instructions are available to reviewers.
+3. Confirm `.env` and passwords are not committed.
+4. Run the complete Docker test suite.
+5. Review the quality report and documented limitations.
+6. Verify the Git repository contains the intended Task 093
+   implementation and no temporary local files.
+
+This implementation prioritizes reproducibility, provenance,
+staging isolation, honest data semantics, and preservation of
+original source observations.

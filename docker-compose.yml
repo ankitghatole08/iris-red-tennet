@@ -1,50 +1,65 @@
-version: "3.9"
+
+name: iris-red-tennet-task093
 
 services:
 
+  # Isolated PostgreSQL/PostGIS staging database
   postgres:
-
     image: postgis/postgis:17-3.5
 
-    container_name: nrw-postgis
-
-    restart: unless-stopped
-
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${IRIS_POSTGRES_DB:?Database name is required}
+      POSTGRES_USER: ${IRIS_POSTGRES_USER:?Database user is required}
+      POSTGRES_PASSWORD: ${IRIS_POSTGRES_PASSWORD:?Database password is required}
+
+      # Used by initialization scripts on first database creation
+      IRIS_INGEST_USER: ${IRIS_INGEST_USER:?Ingestion user is required}
+      IRIS_INGEST_PASSWORD: ${IRIS_INGEST_PASSWORD:?Ingestion password is required}
 
     ports:
-      - "5433:5432"
+      - "127.0.0.1:55433:5432"
 
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      # Persistent staging database
+      - staging_postgres_data:/var/lib/postgresql/data
+
+      # Runs automatically only when initializing a fresh DB volume
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
 
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test:
+        - CMD-SHELL
+        - pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"
       interval: 10s
       timeout: 5s
       retries: 5
 
-  pgadmin:
+  # IRIS Task 093 Python ETL application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
 
-    image: dpage/pgadmin4
+    image: iris-tennet-task093:local
 
-    container_name: nrw-pgadmin
-
-    restart: unless-stopped
+    profiles:
+      - pipeline
 
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@gmail.com
-      PGADMIN_DEFAULT_PASSWORD: admin123
+      IRIS_POSTGRES_DB: ${IRIS_POSTGRES_DB:?Database name is required}
+      IRIS_INGEST_USER: ${IRIS_INGEST_USER:?Ingestion user is required}
+      IRIS_INGEST_PASSWORD: ${IRIS_INGEST_PASSWORD:?Ingestion password is required}
 
-    ports:
-      - "5050:80"
+      IRIS_DB_HOST: postgres
+      IRIS_DB_PORT: "5432"
+
+    volumes:
+      # Official source data is read-only
+      - ./data/raw:/app/data/raw:ro
 
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
 
 volumes:
-
-  postgres_data:
+  staging_postgres_data:
